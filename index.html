@@ -30,9 +30,10 @@
         .question-card {
             border-bottom: 1px solid #e2e8f0;
             padding: 20px 0;
+            transition: all 0.3s ease;
         }
-        .question-card:last-child {
-            border-bottom: none;
+        .question-card.hidden {
+            display: none !important;
         }
         .question-text {
             font-size: 1.1em;
@@ -46,6 +47,8 @@
             display: block;
             margin: 8px 0;
             cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
         }
         .text-input {
             width: 100%;
@@ -64,33 +67,60 @@
             border-radius: 4px;
             cursor: pointer;
             display: block;
-            margin: 30px auto;
+            margin: 20px auto;
             transition: background 0.2s;
         }
         .btn:hover {
             background-color: #219653;
         }
+        .btn-secondary {
+            background-color: #2980b9;
+        }
+        .btn-secondary:hover {
+            background-color: #2471a3;
+        }
+        .action-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
         #results {
             margin-top: 30px;
             padding: 20px;
-            background-color: #e8f8f5;
-            border-left: 5px solid #2cc990;
             border-radius: 4px;
             display: none;
+            text-align: center;
+        }
+        .pass-box {
+            background-color: #e8f8f5;
+            border-left: 5px solid #2cc990;
+        }
+        .fail-box {
+            background-color: #fdf2f2;
+            border-left: 5px solid #ec5b5b;
         }
         .score-text {
-            font-size: 1.4em;
+            font-size: 1.6em;
             font-weight: bold;
-            color: #27ae60;
         }
+        .score-text.pass { color: #27ae60; }
+        .score-text.fail { color: #c0392b; }
+        
         .explanation-box {
-            margin-top: 8px;
-            padding: 8px 12px;
-            background-color: #f8fafc;
-            border-left: 3px solid #64748b;
+            margin-top: 10px;
+            padding: 10px 14px;
+            border-radius: 4px;
             font-size: 0.95em;
-            color: #475569;
             display: none;
+        }
+        .explanation-box.correct-bg {
+            background-color: #e8f8f5;
+            border-left: 4px solid #27ae60;
+        }
+        .explanation-box.incorrect-bg {
+            background-color: #fdf2f2;
+            border-left: 4px solid #c0392b;
         }
         .correct {
             color: #27ae60;
@@ -110,23 +140,151 @@
 </div>
 
 <div class="container">
-    <form id="quizForm">
-        <div id="questionsContainer"></div>
-        <button type="button" class="btn" onclick="gradeQuiz()">Submit Quiz & Show Explanations</button>
-    </form>
-
     <div id="results">
         <div class="score-text" id="scoreDisplay"></div>
-        <p>Review your answers and explanations below each question.</p>
+        <p id="statusMessage"></p>
+        <div class="action-group" id="actionButtons"></div>
     </div>
+
+    <form id="quizForm">
+        <div id="questionsContainer"></div>
+        <button type="button" id="submitBtn" class="btn" onclick="gradeQuiz()">Submit Quiz for Grading</button>
+    </form>
 </div>
 
 <script>
-    const quizData = [{"id": 1, "type": "mcq", "question": "How do you say 'hello' in Spanish?", "options": ["Hola", "Adi\u00f3s", "Gracias", "Por favor"], "answer": "Hola", "explanation": "Lesson 1: 'Hola' means hello."}, {"id": 2, "type": "mcq", "question": "What is the Spanish pronoun for 'I'?", "options": ["T\u00fa", "\u00c9l", "Yo", "Ella"], "answer": "Yo", "explanation": "Lesson 1: 'Yo' means I."}, {"id": 3, "type": "mcq", "question": "How do you say 'I am' (identity)?", "options": ["Estoy", "Soy", "Tengo", "Hago"], "answer": "Soy", "explanation": "Lesson 1 & 19: 'Soy' is used for identity (I am)."}, {"id": 4, "type": "mcq", "question": "Translate: 'A coffee, please.'", "options": ["Una Coca-Cola, por favor.", "Un caf\u00e9, por favor.", "Dos caf\u00e9s, por favor.", "Un caf\u00e9 y una cerveza."], "answer": "Un caf\u00e9, por favor.", "explanation": "Lesson 1: 'Un caf\u00e9' is a coffee, and 'por favor' is please."}, {"id": 5, "type": "mcq", "question": "Which of these is the feminine article and noun?", "options": ["Un caf\u00e9", "El carro", "Una Coca-Cola", "El coche"], "answer": "Una Coca-Cola", "explanation": "Lesson 1: 'Coca-Cola' is feminine, so it takes 'una'."}, {"id": 6, "type": "mcq", "question": "How do you say 'and' in Spanish?", "options": ["Y", "O", "Pero", "As\u00ed"], "answer": "Y", "explanation": "Lesson 1: 'Y' is the conjunction for 'and'."}, {"id": 7, "type": "mcq", "question": "Translate: 'Two coffees and a Coca-Cola, please.'", "options": ["Dos Coca-Colas y un caf\u00e9, por favor.", "Un caf\u00e9 y dos Coca-Colas, por favor.", "Dos caf\u00e9s y una Coca-Cola, por favor.", "Un caf\u00e9 por favor."], "answer": "Dos caf\u00e9s y una Coca-Cola, por favor.", "explanation": "Lesson 1: 'Dos caf\u00e9s' (two coffees), 'y' (and), 'una Coca-Cola' (a Coca-Cola)."}, {"id": 8, "type": "mcq", "question": "How do you say 'I want'?", "options": ["Necesito", "Tengo", "Quiero", "S\u00e9"], "answer": "Quiero", "explanation": "Lesson 1 & 5: 'Quiero' comes from the verb querer (to want)."}, {"id": 9, "type": "mcq", "question": "How do you say 'thank you very much'?", "options": ["Gracias", "Muchas gracias", "Por favor", "Lo siento"], "answer": "Muchas gracias", "explanation": "Lesson 2: 'Muchas gracias' means thank you very much."}, {"id": 10, "type": "mcq", "question": "Translate 'possible' and 'impossible' into Spanish.", "options": ["Posible / Imposible", "Bueno / Malo", "Importante / As\u00ed", "F\u00e1cil / Dif\u00edcil"], "answer": "Posible / Imposible", "explanation": "Lesson 2: Spelled almost identically to English but pronounced differently."}, {"id": 11, "type": "mcq", "question": "How do you say 'It is' (identity/characteristic)?", "options": ["Est\u00e1", "Es", "Soy", "Eres"], "answer": "Es", "explanation": "Lesson 2: 'Es' is the third-person singular form of ser (to be)."}, {"id": 12, "type": "mcq", "question": "How do you say 'for me' and 'for you'?", "options": ["Para m\u00ed / Para ti", "Para ti / Para m\u00ed", "Por m\u00ed / Por ti", "De m\u00ed / De ti"], "answer": "Para m\u00ed / Para ti", "explanation": "Lesson 2: 'Para m\u00ed' means for me; 'para ti' means for you."}, {"id": 13, "type": "mcq", "question": "Translate: 'It's not for you.'", "options": ["No es para m\u00ed.", "Es para ti.", "No es para ti.", "Es imposible para ti."], "answer": "No es para ti.", "explanation": "Lesson 2: 'No es' (It's not) + 'para ti' (for you)."}, {"id": 14, "type": "mcq", "question": "What are the Spanish words for 'the' (masculine/feminine singular)?", "options": ["Un / Una", "El / La", "Los / Las", "Lo / La"], "answer": "El / La", "explanation": "Lesson 2: 'El' is masculine singular; 'La' is feminine singular."}, {"id": 15, "type": "mcq", "question": "Translate: 'The coffee's not for me. It's for you.'", "options": ["El caf\u00e9 es para m\u00ed. No es para ti.", "El caf\u00e9 no es para m\u00ed. Es para ti.", "La Coca-Cola no es para m\u00ed.", "El coche no es para m\u00ed."], "answer": "El caf\u00e9 no es para m\u00ed. Es para ti.", "explanation": "Lesson 2: Translates directly matching masculine nouns and pronouns."}, {"id": 16, "type": "mcq", "question": "How do you ask 'Is it for you?'", "options": ["\u00bfNo es para ti?", "\u00bfEs para ti?", "\u00bfEs para m\u00ed?", "\u00bfQu\u00e9 tienes?"], "answer": "\u00bfEs para ti?", "explanation": "Lesson 3: Intonation changes a statement into a question in Spanish."}, {"id": 17, "type": "mcq", "question": "How do you say 'important'?", "options": ["Importante", "Bueno", "Malo", "Posible"], "answer": "Importante", "explanation": "Lesson 3: 'Importante' means important."}, {"id": 18, "type": "mcq", "question": "Translate: 'It's not important.'", "options": ["Es importante.", "\u00bfEs importante?", "No es importante.", "Es muy importante."], "answer": "No es importante.", "explanation": "Lesson 3: Place 'no' before the verb to make it negative."}, {"id": 19, "type": "mcq", "question": "What do 'bueno' and 'malo' mean?", "options": ["Very / Bad", "Good / Bad", "Important / Possible", "Now / Like that"], "answer": "Good / Bad", "explanation": "Lesson 3: 'Bueno' = good, 'malo' = bad."}, {"id": 20, "type": "mcq", "question": "Translate: 'It's not good for me.'", "options": ["No es malo para m\u00ed.", "Es bueno para ti.", "No es bueno para m\u00ed.", "Es muy malo."], "answer": "No es bueno para m\u00ed.", "explanation": "Lesson 3: 'No es bueno' (It's not good) + 'para m\u00ed' (for me)."}, {"id": 21, "type": "mcq", "question": "How do you say 'very'?", "options": ["Mucho", "Muy", "As\u00ed", "Ahora"], "answer": "Muy", "explanation": "Lesson 3: 'Muy' modifies adjectives to mean 'very'."}, {"id": 22, "type": "mcq", "question": "How do you say 'Excuse me!' formally?", "options": ["Lo siento", "Por favor", "Perdone", "Adi\u00f3s"], "answer": "Perdone", "explanation": "Lesson 4: 'Perdone' is a formal way to say excuse me."}, {"id": 23, "type": "mcq", "question": "What is 'a water' and 'a beer'?", "options": ["Un caf\u00e9 / Una Coca-Cola", "Un agua / Una cerveza", "Un coche / Un carro", "Un agua / Un caf\u00e9"], "answer": "Un agua / Una cerveza", "explanation": "Lesson 4: Note that 'agua' uses 'un' in the singular to avoid double 'a' sounds, but 'cerveza' is standard feminine 'una'."}, {"id": 24, "type": "mcq", "question": "How does a female say 'I am bad'?", "options": ["Soy bueno.", "Soy buena.", "Soy malo.", "Soy mala."], "answer": "Soy mala.", "explanation": "Lesson 4: Adjectives change ending to '-a' for females."}, {"id": 25, "type": "mcq", "question": "How do you say 'I'm sorry'?", "options": ["Perdone", "Lo siento", "Por favor", "Muchas gracias"], "answer": "Lo siento", "explanation": "Lesson 4: 'Lo siento' literally means 'I feel it', used for 'I'm sorry'."}, {"id": 26, "type": "mcq", "question": "How do you say 'but'?", "options": ["Y", "As\u00ed", "Pero", "Ahora"], "answer": "Pero", "explanation": "Lesson 4: 'Pero' means but."}, {"id": 27, "type": "mcq", "question": "Translate: 'I'm sorry but it's not possible.'", "options": ["Lo siento pero es posible.", "Perdone pero no es posible.", "Lo siento pero no es posible.", "Lo siento pero no soy Carlos."], "answer": "Lo siento pero no es posible.", "explanation": "Lesson 4: Combines 'Lo siento', 'pero', and 'no es posible'."}, {"id": 28, "type": "mcq", "question": "How do you say 'I have' and 'I don't have'?", "options": ["Quiero / No quiero", "Necesito / No necesito", "Tengo / No tengo", "S\u00e9 / No sabes"], "answer": "Tengo / No tengo", "explanation": "Lesson 4: From the verb tener (to have)."}, {"id": 29, "type": "mcq", "question": "How do you say 'I have it'?", "options": ["No lo tengo.", "Lo tengo.", "Lo quiero.", "Lo necesito."], "answer": "Lo tengo.", "explanation": "Lesson 4: 'Lo' is the object pronoun for 'it', placed before the conjugated verb."}, {"id": 30, "type": "mcq", "question": "What are the Spain (ES) and Latin American (AmL) words for 'a car'?", "options": ["Un caf\u00e9 / Un carro", "Un coche / Un carro", "Un carro / Un coche", "El coche / La cocina"], "answer": "Un coche / Un carro", "explanation": "Lesson 4: 'Un coche' is used predominantly in Spain; 'un carro' in Latin America."}, {"id": 31, "type": "mcq", "question": "How do you say 'I need'?", "options": ["Quiero", "Tengo", "Necesito", "Hago"], "answer": "Necesito", "explanation": "Lesson 5: From the verb necesitar (to need)."}, {"id": 32, "type": "mcq", "question": "How do you say 'now'?", "options": ["As\u00ed", "Ahora", "Hoy", "Ma\u00f1ana"], "answer": "Ahora", "explanation": "Lesson 5: 'Ahora' means now."}, {"id": 33, "type": "mcq", "question": "How do you say 'like that' or 'that way'?", "options": ["As\u00ed", "Ahora", "Pero", "Y"], "answer": "As\u00ed", "explanation": "Lesson 5: 'As\u00ed' means like that / that way."}, {"id": 34, "type": "mcq", "question": "Translate: 'I want it, but I don't need it now.'", "options": ["Lo quiero, pero no lo necesito ahora.", "Lo necesito, pero no lo quiero ahora.", "No lo quiero as\u00ed.", "Lo siento pero no tengo un coche."], "answer": "Lo quiero, pero no lo necesito ahora.", "explanation": "Lesson 5: Sentence construction using direct object pronouns and conjunctions."}, {"id": 35, "type": "mcq", "question": "How do you say 'goodbye'?", "options": ["Hola", "Adi\u00f3s", "Gracias", "Perdone"], "answer": "Adi\u00f3s", "explanation": "Lesson 5: 'Adi\u00f3s' means goodbye."}, {"id": 36, "type": "mcq", "question": "How do you say 'How are you?' informally?", "options": ["\u00bfC\u00f3mo est\u00e1?", "\u00bfC\u00f3mo est\u00e1s?", "Buenos d\u00edas", "Muy bien, gracias"], "answer": "\u00bfC\u00f3mo est\u00e1s?", "explanation": "Lesson 6: The final '-s' makes it informal (t\u00fa form)."}, {"id": 37, "type": "mcq", "question": "How do you say 'Good morning'?", "options": ["Buenas noches", "Buenos d\u00edas", "Hola", "Adi\u00f3s"], "answer": "Buenos d\u00edas", "explanation": "Lesson 6: 'Buenos d\u00edas' is standard greeting for morning."}, {"id": 38, "type": "mcq", "question": "How do you say 'Very well, thanks'?", "options": ["Muy mal, gracias", "Muy bien, gracias", "Lo siento", "Por favor"], "answer": "Muy bien, gracias", "explanation": "Lesson 6: 'Muy bien' (very well) + 'gracias' (thanks)."}, {"id": 39, "type": "mcq", "question": "How do you say 'you have' (informal)?", "options": ["Tengo", "Tiene", "Tienes", "Sales"], "answer": "Tienes", "explanation": "Lesson 6: 'Tienes' is the t\u00fa form of tener."}, {"id": 40, "type": "mcq", "question": "How do you ask 'What do you have?'", "options": ["\u00bfQu\u00e9 quieres?", "\u00bfQu\u00e9 tienes?", "\u00bfQu\u00e9 necesitas?", "\u00bfC\u00f3mo est\u00e1s?"], "answer": "\u00bfQu\u00e9 tienes?", "explanation": "Lesson 6: '\u00bfQu\u00e9...?' means what, combined with tienes."}, {"id": 41, "type": "mcq", "question": "How do you say 'in' or 'on' in Spanish?", "options": ["De", "Para", "En", "Por"], "answer": "En", "explanation": "Lesson 17: 'En' acts as both in and on depending on context."}, {"id": 42, "type": "mcq", "question": "Translate: 'Carlos is in the house.'", "options": ["Carlos est\u00e1 en el coche.", "Carlos es de la casa.", "Carlos est\u00e1 en la casa.", "Carlos tiene una casa."], "answer": "Carlos est\u00e1 en la casa.", "explanation": "Lesson 17: Estar is used for location ('est\u00e1 en la casa')."}, {"id": 43, "type": "mcq", "question": "What does the infinitive verb 'hacer' mean?", "options": ["To know", "To do / to make", "To eat", "To leave"], "answer": "To do / to make", "explanation": "Lesson 17: 'Hacer' means to do or to make."}, {"id": 44, "type": "mcq", "question": "Translate: 'I want to do it here.'", "options": ["Quiero hacerlo aqu\u00ed.", "Quiero saber aqu\u00ed.", "Necesito hacerlo ahora.", "No puedo hacerlo."], "answer": "Quiero hacerlo aqu\u00ed.", "explanation": "Lesson 17: 'Hacerlo' attaches the object pronoun 'lo' to the infinitive 'hacer'."}, {"id": 45, "type": "mcq", "question": "What is the difference between 'saber' and 's\u00e9'?", "options": ["Saber is 'you know', s\u00e9 is 'I know'", "Saber is 'to know' (infinitive), s\u00e9 is 'I know' (conjugated)", "Saber is 'to eat', s\u00e9 is 'I eat'", "They mean the same thing and are interchangeable"], "answer": "Saber is 'to know' (infinitive), s\u00e9 is 'I know' (conjugated)", "explanation": "Lesson 17: 'Saber' is the base verb; '(yo) s\u00e9' is the first person singular form."}, {"id": 46, "type": "mcq", "question": "Translate: 'Do you know when you have to leave?'", "options": ["\u00bfSabes por qu\u00e9 tienes que salir?", "\u00bfSabes cu\u00e1ndo tienes que salir?", "\u00bfSabes d\u00f3nde est\u00e1 la silla?", "\u00bfSabe ella cu\u00e1ndo salir?"], "answer": "\u00bfSabes cu\u00e1ndo tienes que salir?", "explanation": "Lesson 17: '\u00bfSabes...?' (Do you know) + 'cu\u00e1ndo' (when) + 'tienes que salir' (you have to leave)."}, {"id": 47, "type": "mcq", "question": "How do you say 'she knows'?", "options": ["S\u00e9", "Sabes", "Sabe", "Cena"], "answer": "Sabe", "explanation": "Lesson 17: 'Sabe' is the third-person singular (\u00e9l/ella/usted) form of saber."}, {"id": 48, "type": "mcq", "question": "What do 'comer' and 'cenar' mean respectively?", "options": ["To do / To know", "To leave / To have", "To eat / To have dinner", "To see / To want"], "answer": "To eat / To have dinner", "explanation": "Lesson 17: 'Comer' is to eat; 'cenar' is to have dinner."}, {"id": 49, "type": "mcq", "question": "Translate: 'Where does he have dinner?'", "options": ["\u00bfCu\u00e1ndo cenas?", "\u00bfD\u00f3nde cena?", "\u00bfD\u00f3nde como?", "\u00bfPor qu\u00e9 sale?"], "answer": "\u00bfD\u00f3nde cena?", "explanation": "Lesson 17: '\u00bfD\u00f3nde...?' means where, 'cena' is the third-person singular of cenar."}, {"id": 50, "type": "mcq", "question": "What does 'salir' mean?", "options": ["To stay", "To see", "To leave / to go out", "To say"], "answer": "To leave / to go out", "explanation": "Lesson 18: 'Salir' is the infinitive form meaning to leave."}, {"id": 51, "type": "mcq", "question": "What is the 'I' form of the verb salir?", "options": ["Salo", "Salgo", "Sales", "Sale"], "answer": "Salgo", "explanation": "Lesson 18: 'Salir' is irregular in the first person: 'yo salgo'."}, {"id": 52, "type": "mcq", "question": "Translate: 'She leaves tonight.'", "options": ["Sale ma\u00f1ana.", "No salgo hoy.", "Sale esta noche.", "Sales ahora."], "answer": "Sale esta noche.", "explanation": "Lesson 18: 'Esta noche' means tonight; 'sale' is she leaves."}, {"id": 53, "type": "mcq", "question": "Translate: 'Do you have a water?'", "options": ["\u00bfTengo un agua?", "\u00bfTienes un agua?", "\u00bfTiene una cerveza?", "\u00bfNecesitas un agua?"], "answer": "\u00bfTienes un agua?", "explanation": "Lesson 18: 'Tienes' is the t\u00fa form of tener."}, {"id": 54, "type": "mcq", "question": "When expressing being busy or tired, which verb 'to be' is used?", "options": ["Ser", "Estar", "Hacer", "Tener"], "answer": "Estar", "explanation": "Lesson 18: Temporary states/conditions like busy (ocupado) or tired (cansado) use 'estar'."}, {"id": 55, "type": "mcq", "question": "Translate: 'Is he tired?'", "options": ["\u00bfEst\u00e1 ocupado?", "\u00bfEs cansado?", "\u00bfEst\u00e1 cansado?", "\u00bfEst\u00e1 muy ocupada?"], "answer": "\u00bfEst\u00e1 cansado?", "explanation": "Lesson 18: '\u00bfEst\u00e1 cansado?' uses estar for a physical state."}, {"id": 56, "type": "mcq", "question": "How do you conjugate 'necesitar' for 'she/he'?", "options": ["Necesito", "Necesitas", "Necesita", "Necesitan"], "answer": "Necesita", "explanation": "Lesson 18: Third person singular drops the '-s' to become 'necesita'."}, {"id": 57, "type": "mcq", "question": "What does 'ver' mean?", "options": ["To want", "To see", "To say", "To be"], "answer": "To see", "explanation": "Lesson 19: 'Ver' is the infinitive meaning to see."}, {"id": 58, "type": "mcq", "question": "How do you say 'I see'?", "options": ["Veo", "Ves", "Ve", "Verlo"], "answer": "Veo", "explanation": "Lesson 19: 'Yo veo' is the first person singular of ver."}, {"id": 59, "type": "mcq", "question": "Translate: 'Do you see that it's not possible?'", "options": ["\u00bfVes que es imposible?", "\u00bfVeo que no es posible?", "\u00bfVes que no es posible?", "\u00bfPuede verlo?"], "answer": "\u00bfVes que no es posible?", "explanation": "Lesson 19: '\u00bfVes que...?' (Do you see that...?) + 'no es posible'."}, {"id": 60, "type": "mcq", "question": "How do you say 'I can'?", "options": ["Puedo", "Puedes", "Puede", "Saber"], "answer": "Puedo", "explanation": "Lesson 19: 'Puedo' is the first person singular of poder (to be able to)."}, {"id": 61, "type": "mcq", "question": "Translate: 'He sees that I can't do it.'", "options": ["Veo que no puedo hacerlo.", "Ve que no puedo hacerlo.", "Ve que puede salir.", "Quiere saber."], "answer": "Ve que no puedo hacerlo.", "explanation": "Lesson 19: 'Ve' (He sees) + 'que no puedo hacerlo' (that I cannot do it)."}, {"id": 62, "type": "mcq", "question": "Translate: 'She can leave when she wants.'", "options": ["Puede salir cuando quiere.", "Quiero cenar ahora.", "No puedo hacerlo ahora.", "Sale esta noche."], "answer": "Puede salir cuando quiere.", "explanation": "Lesson 19: 'Puede salir' (She can leave) + 'cuando quiere' (when she wants)."}, {"id": 63, "type": "mcq", "question": "When expressing personal identity or names, which verb 'to be' is used?", "options": ["Estar", "Ser", "Tener", "Hacer"], "answer": "Ser", "explanation": "Lesson 19: Essential identity (names, origin) uses 'ser' (soy/eres/es)."}, {"id": 64, "type": "mcq", "question": "Translate: 'Is she Carolina?'", "options": ["\u00bfEst\u00e1 Carolina?", "\u00bfEres Carolina?", "\u00bfEs Carolina?", "\u00bfQui\u00e9n es Carolina?"], "answer": "\u00bfEs Carolina?", "explanation": "Lesson 19: Uses 'es' (from ser) because it asks about identity."}, {"id": 65, "type": "mcq", "question": "What is the feminine form of 'Spanish'?", "options": ["Espanol", "Espa\u00f1ola", "Brit\u00e1nica", "Americana"], "answer": "Espa\u00f1ola", "explanation": "Lesson 20: Nationalities ending in a consonant add '-a' for feminine format."}, {"id": 66, "type": "mcq", "question": "Translate: 'I am British.' (assuming mixed/neutral/either gender context)", "options": ["Soy espa\u00f1ol.", "Soy americano.", "Soy brit\u00e1nico/a.", "Estoy brit\u00e1nico."], "answer": "Soy brit\u00e1nico/a.", "explanation": "Lesson 20: Nationalities use the verb ser + the corresponding adjective."}, {"id": 67, "type": "mcq", "question": "What are the object pronouns for 'me' and 'you' respectively?", "options": ["Lo / La", "Me / Te", "Mi / Ti", "Yo / T\u00fa"], "answer": "Me / Te", "explanation": "Lesson 20: 'Me' and 'te' are used as object pronouns (e.g., verme, verte)."}, {"id": 68, "type": "mcq", "question": "Translate: 'Can you see me?'", "options": ["\u00bfPuedes verme?", "\u00bfPuedo verte?", "\u00bfMe ves?", "\u00bfPuedes ver mi carro?"], "answer": "\u00bfPuedes verme?", "explanation": "Lesson 20: The pronoun 'me' attaches directly to the end of the infinitive 'ver'."}, {"id": 69, "type": "mcq", "question": "What does 'decir' mean?", "options": ["To do", "To see", "To say / tell", "To leave"], "answer": "To say / tell", "explanation": "Lesson 20: 'Decir' is the infinitive form for to say or to tell."}, {"id": 70, "type": "mcq", "question": "Translate: 'Why can't you tell me now?'", "options": ["\u00bfPor qu\u00e9 no puedes decirme ahora?", "\u00bfQuieres decirme por qu\u00e9?", "\u00bfPuedes decirme ahora?", "No quiero decirlo ahora."], "answer": "\u00bfPor qu\u00e9 no puedes decirme ahora?", "explanation": "Lesson 20: '\u00bfPor qu\u00e9 no puedes...?' (Why can't you...?) + 'decirme ahora' (tell me now)."}, {"id": 71, "type": "fill", "question": "Complete the phrase: 'Hello. I'm Peter.' -> 'Hola. Yo ______ Peter.'", "answer": "soy", "explanation": "Lesson 1: 'soy' completes 'I am' for identity."}, {"id": 72, "type": "fill", "question": "Complete the phrase: 'A coffee and two Coca-Colas, please.' -> 'Un caf\u00e9 y ______ Coca-Colas, por favor.'", "answer": "dos", "explanation": "Lesson 1: 'dos' means two."}, {"id": 73, "type": "fill", "question": "Complete: 'Thank you very much' -> '______ gracias'", "answer": "muchas", "explanation": "Lesson 2: 'Muchas gracias' is thank you very much."}, {"id": 74, "type": "fill", "question": "Complete: 'It is impossible for you.' -> 'Es imposible para ______.'", "answer": "ti", "explanation": "Lesson 2: 'para ti' means for you."}, {"id": 75, "type": "fill", "question": "Complete: 'The Coca-Cola is for me.' -> '______ Coca-Cola es para m\u00ed.'", "answer": "la", "explanation": "Lesson 2: 'la' is the feminine singular definite article."}, {"id": 76, "type": "fill", "question": "Complete: 'It's not important.' -> '______ es importante.'", "answer": "no", "explanation": "Lesson 3: Add 'no' before the verb to negate it."}, {"id": 77, "type": "fill", "question": "Complete: 'It's very good.' -> 'Es ______ bueno.'", "answer": "muy", "explanation": "Lesson 3: 'muy' means very."}, {"id": 78, "type": "fill", "question": "Complete: 'I want a beer, please.' -> 'Quiero una ______, por favor.'", "answer": "cerveza", "explanation": "Lesson 4: 'cerveza' means beer."}, {"id": 79, "type": "fill", "question": "Complete: 'I'm sorry but I don't have a car.' -> 'Lo siento ______ no tengo un coche.'", "answer": "pero", "explanation": "Lesson 4: 'pero' means but."}, {"id": 80, "type": "fill", "question": "Complete: 'I don't have it.' -> 'No ______ tengo.'", "answer": "lo", "explanation": "Lesson 4: 'lo' is the direct object pronoun for 'it'."}, {"id": 81, "type": "fill", "question": "Complete: 'I want it now.' -> 'Lo quiero ______.'", "answer": "ahora", "explanation": "Lesson 5: 'ahora' means now."}, {"id": 82, "type": "fill", "question": "Complete: 'It's not like that.' -> 'No es ______.'", "answer": "as\u00ed", "explanation": "Lesson 5: 'as\u00ed' means like that."}, {"id": 83, "type": "fill", "question": "Complete: 'Good morning.' -> '______ d\u00edas.'", "answer": "buenos", "explanation": "Lesson 6: 'Buenos d\u00edas' means good morning."}, {"id": 84, "type": "fill", "question": "Complete: 'Don't you have the car?' -> '\u00bfNo tienes ______ coche?'", "answer": "el", "explanation": "Lesson 6: 'el' is the masculine singular definite article."}, {"id": 85, "type": "fill", "question": "Complete: 'I know where the chair is.' -> 'Yo ______ d\u00f3nde est\u00e1 la silla.'", "answer": "s\u00e9", "explanation": "Lesson 17: 's\u00e9' is 'I know' from saber."}, {"id": 86, "type": "fill", "question": "Complete: 'Do you know that I do it today?' -> '\u00bf______ que lo hago hoy?'", "answer": "sabes", "explanation": "Lesson 17: 'sabes' is 'you know' (t\u00fa form)."}, {"id": 87, "type": "fill", "question": "Complete: 'He does it.' -> '\u00c9l ______ hace.'", "answer": "lo", "explanation": "Lesson 17: 'lo' stands for 'it'."}, {"id": 88, "type": "fill", "question": "Complete: 'She eats on a chair' -> 'Ella ______ en una silla.'", "answer": "come", "explanation": "Lesson 17: 'come' is the third person singular of comer."}, {"id": 89, "type": "fill", "question": "Complete: 'I leave tomorrow.' -> '______ ma\u00f1ana.'", "answer": "salgo", "explanation": "Lesson 18: 'salgo' is the irregular first person of salir."}, {"id": 90, "type": "fill", "question": "Complete: 'I am busy (male).' -> '______ ocupado.'", "answer": "estoy", "explanation": "Lesson 18: 'estoy' is used for temporary states like being busy."}, {"id": 91, "type": "fill", "question": "Complete: 'She is very busy.' -> 'Est\u00e1 muy ______.'", "answer": "ocupada", "explanation": "Lesson 18: Feminine subject matching requires 'ocupada'."}, {"id": 92, "type": "fill", "question": "Complete: 'I want to see it today.' -> 'Quiero ______ hoy.'", "answer": "verlo", "explanation": "Lesson 19: 'verlo' combines 'ver' (to see) and 'lo' (it)."}, {"id": 93, "type": "fill", "question": "Complete: 'I see that you want it.' -> 'Veo que ______ quieres.'", "answer": "lo", "explanation": "Lesson 19: 'lo quieres' means you want it."}, {"id": 94, "type": "fill", "question": "Complete: 'I can do it.' -> '______ hacerlo.'", "answer": "puedo", "explanation": "Lesson 19: 'puedo' is 'I can'."}, {"id": 95, "type": "fill", "question": "Complete: 'He is David.' -> '______ David.'", "answer": "es", "explanation": "Lesson 19: Uses ser ('es') for permanent identity/name."}, {"id": 96, "type": "fill", "question": "Complete: 'Are you Spanish (male)?' -> '\u00bfEres ______?'", "answer": "espa\u00f1ol", "explanation": "Lesson 20: Nationality adjective."}, {"id": 97, "type": "fill", "question": "Complete: 'I can see you.' -> 'Puedo ______.'", "answer": "verte", "explanation": "Lesson 20: 'verte' combines 'ver' and the object pronoun 'te'."}, {"id": 98, "type": "fill", "question": "Complete: 'I want to say it.' -> 'Quiero ______.'", "answer": "decirlo", "explanation": "Lesson 20: 'decirlo' combines 'decir' (to say) and 'lo' (it)."}, {"id": 99, "type": "fill", "question": "Complete: 'She wants to tell me.' -> 'Quiere ______.'", "answer": "decirme", "explanation": "Lesson 20: 'decirme' attaches 'me' to 'decir'."}, {"id": 100, "type": "fill", "question": "Complete: 'He is American.' -> 'Es ______.'", "answer": "americano", "explanation": "Lesson 20: Nationality adjective for American."}];
+    // Master bank containing all unique 100 context words and phrases[cite: 11]
+    const masterQuizData = [
+        {"id": 1, "type": "mcq", "question": "How do you say 'hello' in Spanish?", "options": ["Hola", "Adiós", "Gracias", "Por favor"], "answer": "Hola", "explanation": "Lesson 1: 'Hola' means hello."},
+        {"id": 2, "type": "mcq", "question": "What is the Spanish pronoun for 'I'?", "options": ["Tú", "Él", "Yo", "Ella"], "answer": "Yo", "explanation": "Lesson 1: 'Yo' means I."},
+        {"id": 3, "type": "mcq", "question": "How do you say 'I am' (identity)?", "options": ["Estoy", "Soy", "Tengo", "Hago"], "answer": "Soy", "explanation": "Lesson 1 & 19: 'Soy' is used for identity (I am)."},
+        {"id": 4, "type": "mcq", "question": "Translate: 'A coffee, please.'", "options": ["Una Coca-Cola, por favor.", "Un café, por favor.", "Dos cafés, por favor.", "Un café y una cerveza."], "answer": "Un café, por favor.", "explanation": "Lesson 1: 'Un café' is a coffee, and 'por favor' is please."},
+        {"id": 5, "type": "mcq", "question": "Which of these is the feminine article and noun?", "options": ["Un café", "El carro", "Una Coca-Cola", "El coche"], "answer": "Una Coca-Cola", "explanation": "Lesson 1: 'Coca-Cola' is feminine, so it takes 'una'."},
+        {"id": 6, "type": "mcq", "question": "How do you say 'and' in Spanish?", "options": ["Y", "O", "Pero", "Así"], "answer": "Y", "explanation": "Lesson 1: 'Y' is the conjunction for 'and'."},
+        {"id": 7, "type": "mcq", "question": "Translate: 'Two coffees and a Coca-Cola, please.'", "options": ["Dos Coca-Colas y un café, por favor.", "Un café y dos Coca-Colas, por favor.", "Dos cafés y una Coca-Cola, por favor.", "Un café por favor."], "answer": "Dos cafés y una Coca-Cola, por favor.", "explanation": "Lesson 1: 'Dos cafés' (two coffees), 'y' (and), 'una Coca-Cola' (a Coca-Cola)."},
+        {"id": 8, "type": "mcq", "question": "How do you say 'I want'?", "options": ["Necesito", "Tengo", "Quiero", "Sé"], "answer": "Quiero", "explanation": "Lesson 1 & 5: 'Quiero' comes from the verb querer (to want)."},
+        {"id": 9, "type": "mcq", "question": "How do you say 'thank you very much'?", "options": ["Gracias", "Muchas gracias", "Por favor", "Lo siento"], "answer": "Muchas gracias", "explanation": "Lesson 2: 'Muchas gracias' means thank you very much."},
+        {"id": 10, "type": "mcq", "question": "Translate 'possible' and 'impossible' into Spanish.", "options": ["Posible / Imposible", "Bueno / Malo", "Importante / Así", "Fácil / Difícil"], "answer": "Posible / Imposible", "explanation": "Lesson 2: Spelled almost identically to English but pronounced differently."},
+        {"id": 11, "type": "mcq", "question": "How do you say 'It is' (identity/characteristic)?", "options": ["Está", "Es", "Soy", "Eres"], "answer": "Es", "explanation": "Lesson 2: 'Es' is the third-person singular form of ser (to be)."},
+        {"id": 12, "type": "mcq", "question": "How do you say 'for me' and 'for you'?", "options": ["Para mí / Para ti", "Para ti / Para mí", "Por mí / Por ti", "De mí / De ti"], "answer": "Para mí / Para ti", "explanation": "Lesson 2: 'Para mí' means for me; 'para ti' means for you."},
+        {"id": 13, "type": "mcq", "question": "Translate: 'It's not for you.'", "options": ["No es para mí.", "Es para ti.", "No es para ti.", "Es imposible para ti."], "answer": "No es para ti.", "explanation": "Lesson 2: 'No es' (It's not) + 'para ti' (for you)."},
+        {"id": 14, "type": "mcq", "question": "What are the Spanish words for 'the' (masculine/feminine singular)?", "options": ["Un / Una", "El / La", "Los / Las", "Lo / La"], "answer": "El / La", "explanation": "Lesson 2: 'El' is masculine singular; 'La' is feminine singular."},
+        {"id": 15, "type": "mcq", "question": "Translate: 'The coffee's not for me. It's for you.'", "options": ["El café es para mí. No es para ti.", "El café no es para mí. Es para ti.", "La Coca-Cola no es para mí.", "El coche no es para mí."], "answer": "El café no es para mí. Es para ti.", "explanation": "Lesson 2: Translates directly matching masculine nouns and pronouns."},
+        {"id": 16, "type": "mcq", "question": "How do you ask 'Is it for you?'", "options": ["¿No es para ti?", "¿Es para ti?", "¿Es para mí?", "¿Qué tienes?"], "answer": "¿Es para ti?", "explanation": "Lesson 3: Intonation changes a statement into a question in Spanish."},
+        {"id": 17, "type": "mcq", "question": "How do you say 'important'?", "options": ["Importante", "Bueno", "Malo", "Posible"], "answer": "Importante", "explanation": "Lesson 3: 'Importante' means important."},
+        {"id": 18, "type": "mcq", "question": "Translate: 'It's not important.'", "options": ["Es importante.", "¿Es importante?", "No es importante.", "Es muy importante."], "answer": "No es importante.", "explanation": "Lesson 3: Place 'no' before the verb to make it negative."},
+        {"id": 19, "type": "mcq", "question": "What do 'bueno' and 'malo' mean?", "options": ["Very / Bad", "Good / Bad", "Important / Possible", "Now / Like that"], "answer": "Good / Bad", "explanation": "Lesson 3: 'Bueno' = good, 'malo' = bad."},
+        {"id": 20, "type": "mcq", "question": "Translate: 'It's not good for me.'", "options": ["No es malo para mí.", "Es bueno para ti.", "No es bueno para mí.", "Es muy malo."], "answer": "No es bueno para mí.", "explanation": "Lesson 3: 'No es bueno' (It's not good) + 'para mí' (for me)."},
+        {"id": 21, "type": "mcq", "question": "How do you say 'very'?", "options": ["Mucho", "Muy", "Así", "Ahora"], "answer": "Muy", "explanation": "Lesson 3: 'Muy' modifies adjectives to mean 'very'."},
+        {"id": 22, "type": "mcq", "question": "How do you say 'Excuse me!' formally?", "options": ["Lo siento", "Por favor", "Perdone", "Adiós"], "answer": "Perdone", "explanation": "Lesson 4: 'Perdone' is a formal way to say excuse me."},
+        {"id": 23, "type": "mcq", "question": "What is 'a water' and 'a beer'?", "options": ["Un café / Una Coca-Cola", "Un agua / Una cerveza", "Un coche / Un carro", "Un agua / Un café"], "answer": "Un agua / Una cerveza", "explanation": "Lesson 4: Note that 'agua' uses 'un' in the singular to avoid double 'a' sounds, but 'cerveza' is standard feminine 'una'."},
+        {"id": 24, "type": "mcq", "question": "How does a female say 'I am bad'?", "options": ["Soy bueno.", "Soy buena.", "Soy malo.", "Soy mala."], "answer": "Soy mala.", "explanation": "Lesson 4: Adjectives change ending to '-a' for females."},
+        {"id": 25, "type": "mcq", "question": "How do you say 'I'm sorry'?", "options": ["Perdone", "Lo siento", "Por favor", "Muchas gracias"], "answer": "Lo siento", "explanation": "Lesson 4: 'Lo siento' literally means 'I feel it', used for 'I'm sorry'."},
+        {"id": 26, "type": "mcq", "question": "How do you say 'but'?", "options": ["Y", "Así", "Pero", "Ahora"], "answer": "Pero", "explanation": "Lesson 4: 'Pero' means but."},
+        {"id": 27, "type": "mcq", "question": "Translate: 'I'm sorry but it's not possible.'", "options": ["Lo siento pero es posible.", "Perdone pero no es posible.", "Lo siento pero no es posible.", "Lo siento pero no soy Carlos."], "answer": "Lo siento pero no es posible.", "explanation": "Lesson 4: Combines 'Lo siento', 'pero', and 'no es posible'."},
+        {"id": 28, "type": "mcq", "question": "How do you say 'I have' and 'I don't have'?", "options": ["Quiero / No quiero", "Necesito / No necesito", "Tengo / No tengo", "Sé / No sabes"], "answer": "Tengo / No tengo", "explanation": "Lesson 4: From the verb tener (to have)."},
+        {"id": 29, "type": "mcq", "question": "How do you say 'I have it'?", "options": ["No lo tengo.", "Lo tengo.", "Lo quiero.", "Lo necesito."], "answer": "Lo tengo.", "explanation": "Lesson 4: 'Lo' is the object pronoun for 'it', placed before the conjugated verb."},
+        {"id": 30, "type": "mcq", "question": "What are the Spain (ES) and Latin American (AmL) words for 'a car'?", "options": ["Un café / Un carro", "Un coche / Un carro", "Un carro / Un coche", "El coche / La cocina"], "answer": "Un coche / Un carro", "explanation": "Lesson 4: 'Un coche' is used predominantly in Spain; 'un carro' in Latin America."},
+        {"id": 31, "type": "mcq", "question": "How do you say 'I need'?", "options": ["Quiero", "Tengo", "Necesito", "Hago"], "answer": "Necesito", "explanation": "Lesson 5: From the verb necesitar (to need)."},
+        {"id": 32, "type": "mcq", "question": "How do you say 'now'?", "options": ["Así", "Ahora", "Hoy", "Mañana"], "answer": "Ahora", "explanation": "Lesson 5: 'Ahora' means now."},
+        {"id": 33, "type": "mcq", "question": "How do you say 'like that' or 'that way'?", "options": ["Así", "Ahora", "Pero", "Y"], "answer": "Así", "explanation": "Lesson 5: 'Así' means like that / that way."},
+        {"id": 34, "type": "mcq", "question": "Translate: 'I want it, but I don't need it now.'", "options": ["Lo quiero, pero no lo necesito ahora.", "Lo necesito, pero no lo quiero ahora.", "No lo quiero así.", "Lo siento pero no tengo un coche."], "answer": "Lo quiero, pero no lo necesito ahora.", "explanation": "Lesson 5: Sentence construction using direct object pronouns and conjunctions."},
+        {"id": 35, "type": "mcq", "question": "How do you say 'goodbye'?", "options": ["Hola", "Adiós", "Gracias", "Perdone"], "answer": "Adiós", "explanation": "Lesson 5: 'Adiós' means goodbye."},
+        {"id": 36, "type": "mcq", "question": "How do you say 'How are you?' informally?", "options": ["¿Cómo está?", "¿Cómo estás?", "Buenos días", "Muy bien, gracias"], "answer": "¿Cómo estás?", "explanation": "Lesson 6: The final '-s' makes it informal (tú form)."},
+        {"id": 37, "type": "mcq", "question": "How do you say 'Good morning'?", "options": ["Buenas noches", "Buenos días", "Hola", "Adiós"], "answer": "Buenos días", "explanation": "Lesson 6: 'Buenos días' is standard greeting for morning."},
+        {"id": 38, "type": "mcq", "question": "How do you say 'Very well, thanks'?", "options": ["Muy mal, gracias", "Muy bien, gracias", "Lo siento", "Por favor"], "answer": "Muy bien, gracias", "explanation": "Lesson 6: 'Muy bien' (very well) + 'gracias' (thanks)."},
+        {"id": 39, "type": "mcq", "question": "How do you say 'you have' (informal)?", "options": ["Tengo", "Tiene", "Tienes", "Sales"], "answer": "Tienes", "explanation": "Lesson 6: 'Tienes' is the tú form of tener."},
+        {"id": 40, "type": "mcq", "question": "How do you ask 'What do you have?'", "options": ["¿Qué quieres?", "¿Qué tienes?", "¿Qué necesitas?", "¿Cómo estás?"], "answer": "¿Qué tienes?", "explanation": "Lesson 6: '¿Qué...?' means what, combined with tienes."},
+        {"id": 41, "type": "mcq", "question": "How do you say 'in' or 'on' in Spanish?", "options": ["De", "Para", "En", "Por"], "answer": "En", "explanation": "Lesson 17: 'En' acts as both in and on depending on context."},
+        {"id": 42, "type": "mcq", "question": "Translate: 'Carlos is in the house.'", "options": ["Carlos está en el coche.", "Carlos es de la casa.", "Carlos está en la casa.", "Carlos tiene una casa."], "answer": "Carlos está en la casa.", "explanation": "Lesson 17: Estar is used for location ('está en la casa')."},
+        {"id": 43, "type": "mcq", "question": "What does the infinitive verb 'hacer' mean?", "options": ["To know", "To do / to make", "To eat", "To leave"], "answer": "To do / to make", "explanation": "Lesson 17: 'Hacer' means to do or to make."},
+        {"id": 44, "type": "mcq", "question": "Translate: 'I want to do it here.'", "options": ["Quiero hacerlo aquí.", "Quiero saber aquí.", "Necesito hacerlo ahora.", "No puedo hacerlo."], "answer": "Quiero hacerlo aquí.", "explanation": "Lesson 17: 'Hacerlo' attaches the object pronoun 'lo' to the infinitive 'hacer'."},
+        {"id": 45, "type": "mcq", "question": "What is the difference between 'saber' and 'sé'?", "options": ["Saber is 'you know', sé is 'I know'", "Saber is 'to know' (infinitive), sé is 'I know' (conjugated)", "Saber is 'to eat', sé is 'I eat'", "They mean the same thing and are interchangeable"], "answer": "Saber is 'to know' (infinitive), sé is 'I know' (conjugated)", "explanation": "Lesson 17: 'Saber' is the base verb; '(yo) sé' is the first person singular form."},
+        {"id": 46, "type": "mcq", "question": "Translate: 'Do you know when you have to leave?'", "options": ["¿Sabes por qué tienes que salir?", "¿Sabes cuándo tienes que salir?", "¿Sabes dónde está la silla?", "Sabe ella cuándo salir?"], "answer": "¿Sabes cuándo tienes que salir?", "explanation": "Lesson 17: '¿Sabes...?' (Do you know) + 'cuándo' (when) + 'tienes que salir' (you have to leave)."},
+        {"id": 47, "type": "mcq", "question": "How do you say 'she knows'?", "options": ["Sé", "Sabes", "Sabe", "Cena"], "answer": "Sabe", "explanation": "Lesson 17: 'Sabe' is the third-person singular (él/ella/usted) form of saber."},
+        {"id": 48, "type": "mcq", "question": "What do 'comer' and 'cenar' mean respectively?", "options": ["To do / To know", "To leave / To have", "To eat / To have dinner", "To see / To want"], "answer": "To eat / To have dinner", "explanation": "Lesson 17: 'Comer' is to eat; 'cenar' is to have dinner."},
+        {"id": 49, "type": "mcq", "question": "Translate: 'Where does he have dinner?'", "options": ["¿Cuándo cenas?", "¿Dónde cena?", "¿Dónde como?", "¿Por qué sale?"], "answer": "¿Dónde cena?", "explanation": "Lesson 17: '¿Dónde...?' means where, 'cena' is the third-person singular of cenar."},
+        {"id": 50, "type": "mcq", "question": "What does 'salir' mean?", "options": ["To stay", "To see", "To leave / to go out", "To say"], "answer": "To leave / to go out", "explanation": "Lesson 18: 'Salir' is the infinitive form meaning to leave."},
+        {"id": 51, "type": "mcq", "question": "What is the 'I' form of the verb salir?", "options": ["Salo", "Salgo", "Sales", "Sale"], "answer": "Salgo", "explanation": "Lesson 18: 'Salir' is irregular in the first person: 'yo salgo'."},
+        {"id": 52, "type": "mcq", "question": "Translate: 'She leaves tonight.'", "options": ["Sale mañana.", "No salgo hoy.", "Sale esta noche.", "Sales ahora."], "answer": "Sale esta noche.", "explanation": "Lesson 18: 'Esta noche' means tonight; 'sale' is she leaves."},
+        {"id": 53, "type": "mcq", "question": "Translate: 'Do you have a water?'", "options": ["¿Tengo un agua?", "¿Tienes un agua?", "¿Tiene una cerveza?", "¿Necesitas un agua?"], "answer": "¿Tienes un agua?", "explanation": "Lesson 18: 'Tienes' is the tú form of tener."},
+        {"id": 54, "type": "mcq", "question": "When expressing being busy or tired, which verb 'to be' is used?", "options": ["Ser", "Estar", "Hacer", "Tener"], "answer": "Estar", "explanation": "Lesson 18: Temporary states/conditions like busy (ocupado) or tired (cansado) use 'estar'."},
+        {"id": 55, "type": "mcq", "question": "Translate: 'Is he tired?'", "options": ["¿Está ocupado?", "¿Es cansado?", "¿Está cansado?", "¿Está muy ocupada?"], "answer": "¿Está cansado?", "explanation": "Lesson 18: '¿Está cansado?' uses estar for a physical state."},
+        {"id": 56, "type": "mcq", "question": "How do you conjugate 'necesitar' for 'she/he'?", "options": ["Necesito", "Necesitas", "Necesita", "Necesitan"], "answer": "Necesita", "explanation": "Lesson 18: Third person singular drops the '-s' to become 'necesita'."},
+        {"id": 57, "type": "mcq", "question": "What does 'ver' mean?", "options": ["To want", "To see", "To say", "To be"], "answer": "To see", "explanation": "Lesson 19: 'Ver' is the infinitive meaning to see."},
+        {"id": 58, "type": "mcq", "question": "How do you say 'I see'?", "options": ["Veo", "Ves", "Ve", "Verlo"], "answer": "Veo", "explanation": "Lesson 19: 'Yo veo' is the first person singular of ver."},
+        {"id": 59, "type": "mcq", "question": "Translate: 'Do you see that it's not possible?'", "options": ["¿Ves que es imposible?", "¿Veo que no es posible?", "¿Ves que no es posible?", "¿Puede verlo?"], "answer": "¿Ves que no es posible?", "explanation": "Lesson 19: '¿Ves que...?' (Do you see that...?) + 'no es posible'."},
+        {"id": 60, "type": "mcq", "question": "How do you say 'I can'?", "options": ["Puedo", "Puedes", "Puede", "Saber"], "answer": "Puedo", "explanation": "Lesson 19: 'Puedo' is the first person singular of poder (to be able to)."},
+        {"id": 61, "type": "mcq", "question": "Translate: 'He sees that I can't do it.'", "options": ["Veo que no puedo hacerlo.", "Ve que no puedo hacerlo.", "Ve que puede salir.", "Quiere saber."], "answer": "Ve que no puedo hacerlo.", "explanation": "Lesson 19: 'Ve' (He sees) + 'que no puedo hacerlo' (that I cannot do it)."},
+        {"id": 62, "type": "mcq", "question": "Translate: 'She can leave when she wants.'", "options": ["Puede salir cuando quiere.", "Quiero cenar ahora.", "No puedo hacerlo ahora.", "Sale esta noche."], "answer": "Puede salir cuando quiere.", "explanation": "Lesson 19: 'Puede salir' (She can leave) + 'cuando quiere' (when she wants)."},
+        {"id": 63, "type": "mcq", "question": "When expressing personal identity or names, which verb 'to be' is used?", "options": ["Estar", "Ser", "Tener", "Hacer"], "answer": "Ser", "explanation": "Lesson 19: Essential identity (names, origin) uses 'ser' (soy/eres/es)."},
+        {"id": 64, "type": "mcq", "question": "Translate: 'Is she Carolina?'", "options": ["¿Está Carolina?", "¿Eres Carolina?", "¿Es Carolina?", "¿Quién es Carolina?"], "answer": "¿Es Carolina?", "explanation": "Lesson 19: Uses 'es' (from ser) because it asks about identity."},
+        {"id": 65, "type": "mcq", "question": "What is the feminine form of 'Spanish'?", "options": ["Espanol", "Española", "Británica", "Americana"], "answer": "Española", "explanation": "Lesson 20: Nationalities ending in a consonant add '-a' for feminine format."},
+        {"id": 66, "type": "mcq", "question": "Translate: 'I am British.' (assuming mixed/neutral/either gender context)", "options": ["Soy español.", "Soy americano.", "Soy británico/a.", "Estoy británico."], "answer": "Soy británico/a.", "explanation": "Lesson 20: Nationalities use the verb ser + the corresponding adjective."},
+        {"id": 67, "type": "mcq", "question": "What are the object pronouns for 'me' and 'you' respectively?", "options": ["Lo / La", "Me / Te", "Mi / Ti", "Yo / Tú"], "answer": "Me / Te", "explanation": "Lesson 20: 'Me' and 'te' are used as object pronouns (e.g., verme, verte)."},
+        {"id": 68, "type": "mcq", "question": "Translate: 'Can you see me?'", "options": ["¿Puedes verme?", "¿Puedo verte?", "¿Me ves?", "¿Puedes ver mi carro?"], "answer": "¿Puedes verme?", "explanation": "Lesson 20: The pronoun 'me' attaches directly to the end of the infinitive 'ver'."},
+        {"id": 69, "type": "mcq", "question": "What does 'decir' mean?", "options": ["To do", "To see", "To say / tell", "To leave"], "answer": "To say / tell", "explanation": "Lesson 20: 'Decir' is the infinitive form for to say or to tell."},
+        {"id": 70, "type": "mcq", "question": "Translate: 'Why can't you tell me now?'", "options": ["¿Por qué no puedes decirme ahora?", "¿Quieres decirme por qué?", "¿Puedes decirme ahora?", "No quiero decirlo ahora."], "answer": "¿Por qué no puedes decirme ahora?", "explanation": "Lesson 20: '¿Por qué no puedes...?' (Why can't you...?) + 'decirme ahora' (tell me now)."},
+        {"id": 71, "type": "fill", "question": "Complete the phrase: 'Hello. I'm Peter.' -> 'Hola. Yo ______ Peter.'", "answer": "soy", "explanation": "Lesson 1: 'soy' completes 'I am' for identity."},
+        {"id": 72, "type": "fill", "question": "Complete the phrase: 'A coffee and two Coca-Colas, please.' -> 'Un café y ______ Coca-Colas, por favor.'", "answer": "dos", "explanation": "Lesson 1: 'dos' means two."},
+        {"id": 73, "type": "fill", "question": "Complete: 'Thank you very much' -> '______ gracias'", "answer": "muchas", "explanation": "Lesson 2: 'Muchas gracias' is thank you very much."},
+        {"id": 74, "type": "fill", "question": "Complete: 'It is impossible for you.' -> 'Es imposible para ______.'", "answer": "ti", "explanation": "Lesson 2: 'para ti' means for you."},
+        {"id": 75, "type": "fill", "question": "Complete: 'The Coca-Cola is for me.' -> '______ Coca-Cola es para mí.'", "answer": "la", "explanation": "Lesson 2: 'la' is the feminine singular definite article."},
+        {"id": 76, "type": "fill", "question": "Complete: 'It's not important.' -> '______ es importante.'", "answer": "no", "explanation": "Lesson 3: Add 'no' before the verb to negate it."},
+        {"id": 77, "type": "fill", "question": "Complete: 'It's very good.' -> 'Es ______ bueno.'", "answer": "muy", "explanation": "Lesson 3: 'muy' means very."},
+        {"id": 78, "type": "fill", "question": "Complete: 'I want a beer, please.' -> 'Quiero una ______, por favor.'", "answer": "cerveza", "explanation": "Lesson 4: 'cerveza' means beer."},
+        {"id": 79, "type": "fill", "question": "Complete: 'I'm sorry but I don't have a car.' -> 'Lo siento ______ no tengo un coche.'", "answer": "pero", "explanation": "Lesson 4: 'pero' means but."},
+        {"id": 80, "type": "fill", "question": "Complete: 'I don't have it.' -> 'No ______ tengo.'", "answer": "lo", "explanation": "Lesson 4: 'lo' is the direct object pronoun for 'it'."},
+        {"id": 81, "type": "fill", "question": "Complete: 'I want it now.' -> 'Lo quiero ______.'", "answer": "ahora", "explanation": "Lesson 5: 'ahora' means now."},
+        {"id": 82, "type": "fill", "question": "Complete: 'It's not like that.' -> 'No es ______.'", "answer": "así", "explanation": "Lesson 5: 'así' means like that."},
+        {"id": 83, "type": "fill", "question": "Complete: 'Good morning.' -> '______ días.'", "answer": "buenos", "explanation": "Lesson 6: 'Buenos días' means good morning."},
+        {"id": 84, "type": "fill", "question": "Complete: 'Don't you have the car?' -> '¿No tienes ______ coche?'", "answer": "el", "explanation": "Lesson 6: 'el' is the masculine singular definite article."},
+        {"id": 85, "type": "fill", "question": "Complete: 'I know where the chair is.' -> 'Yo ______ dónde está la silla.'", "answer": "sé", "explanation": "Lesson 17: 'sé' is 'I know' from saber."},
+        {"id": 86, "type": "fill", "question": "Complete: 'Do you know that I do it today?' -> '¿______ que lo hago hoy?'", "answer": "sabes", "explanation": "Lesson 17: 'sabes' is 'you know' (tú form)."},
+        {"id": 87, "type": "fill", "question": "Complete: 'He does it.' -> 'Él ______ hace.'", "answer": "lo", "explanation": "Lesson 17: 'lo' stands for 'it'."},
+        {"id": 88, "type": "fill", "question": "Complete: 'She eats on a chair' -> 'Ella ______ en una silla.'", "answer": "come", "explanation": "Lesson 17: 'come' is the third person singular of comer."},
+        {"id": 89, "type": "fill", "question": "Complete: 'I leave tomorrow.' -> '______ mañana.'", "answer": "salgo", "explanation": "Lesson 18: 'salgo' is the irregular first person of salir."},
+        {"id": 90, "type": "fill", "question": "Complete: 'I am busy (male).' -> '______ ocupado.'", "answer": "estoy", "explanation": "Lesson 18: 'estoy' is used for temporary states like being busy."},
+        {"id": 91, "type": "fill", "question": "Complete: 'She is very busy.' -> 'Está muy ______.'", "answer": "ocupada", "explanation": "Lesson 18: Feminine subject matching requires 'ocupada'."},
+        {"id": 92, "type": "fill", "question": "Complete: 'I want to see it today.' -> 'Quiero ______ hoy.'", "answer": "verlo", "explanation": "Lesson 19: 'verlo' combines 'ver' (to see) and 'lo' (it)."},
+        {"id": 93, "type": "fill", "question": "Complete: 'I see that you want it.' -> 'Veo que ______ quieres.'", "answer": "lo", "explanation": "Lesson 19: 'lo quieres' means you want it."},
+        {"id": 94, "type": "fill", "question": "Complete: 'I can do it.' -> '______ hacerlo.'", "answer": "puedo", "explanation": "Lesson 19: 'puedo' is 'I can'."},
+        {"id": 95, "type": "fill", "question": "Complete: 'He is David.' -> '______ David.'", "answer": "es", "explanation": "Lesson 19: Uses ser ('es') for permanent identity/name."},
+        {"id": 96, "type": "fill", "question": "Complete: 'Are you Spanish (male)?' -> '¿Eres ______?'", "answer": "español", "explanation": "Lesson 20: Nationality adjective."},
+        {"id": 97, "type": "fill", "question": "Complete: 'I can see you.' -> 'Puedo ______.'", "answer": "verte", "explanation": "Lesson 20: 'verte' combines 'ver' and the object pronoun 'te'."},
+        {"id": 98, "type": "fill", "question": "Complete: 'I want to say it.' -> 'Quiero ______.'", "answer": "decirlo", "explanation": "Lesson 20: 'decirlo' combines 'decir' (to say) and 'lo' (it)."},
+        {"id": 99, "type": "fill", "question": "Complete: 'She wants to tell me.' -> 'Quiere ______.'", "answer": "decirme", "explanation": "Lesson 20: 'decirme' attaches 'me' to 'decir'."},
+        {"id": 100, "type": "fill", "question": "Complete: 'He is American.' -> 'Es ______.'", "answer": "americano", "explanation": "Lesson 20: Nationality adjective for American."}
+    ];
+
+    let currentQuizData = [];
+
+    // Knuth-Fisher-Yates Shuffle Algorithm to guarantee safe array randomization
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex != 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    function initQuiz() {
+        // Clear past states
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('submitBtn').style.display = 'block';
+        
+        // Deep copy and Scramble both question placement and alternate formatting
+        currentQuizData = shuffle([...masterQuizData]);
+        renderQuiz();
+    }
 
     function renderQuiz() {
         const container = document.getElementById('questionsContainer');
-        quizData.forEach((q, index) => {
+        container.innerHTML = ''; // Wipe clean
+
+        currentQuizData.forEach((q, index) => {
             const card = document.createElement('div');
             card.className = 'question-card';
             card.id = `qcard-${q.id}`;
@@ -142,6 +300,7 @@
                 q.options.forEach(opt => {
                     const label = document.createElement('label');
                     label.className = 'option-label';
+                    label.id = `label-${q.id}-${opt.replace(/[^a-zA-Z0-9]/g, '')}`;
                     label.innerHTML = `<input type="radio" name="question-${q.id}" value="${opt}"> ${opt}`;
                     optsDiv.appendChild(label);
                 });
@@ -150,8 +309,9 @@
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.className = 'text-input';
+                input.id = `input-${q.id}`;
                 input.name = `question-${q.id}`;
-                input.placeholder = 'Type your answer here...';
+                input.placeholder = 'Type matching translation word...';
                 card.appendChild(input);
             }
 
@@ -166,8 +326,94 @@
 
     function gradeQuiz() {
         let score = 0;
+        let totalQuestions = currentQuizData.length;
         
-        quizData.forEach(q => {
+        currentQuizData.forEach(q => {
+            const fieldName = `question-${q.id}`;
+            let userAns = '';
+            
+            // Extract selections
+            if (q.type === 'mcq') {
+                const selected = document.querySelector(`input[name="${fieldName}"]:checked`);
+                userAns = selected ? selected.value : '';
+            } else if (q.type === 'fill') {
+                const inputField = document.querySelector(`input[name="${fieldName}"]`);
+                userAns = inputField ? inputField.value.trim() : '';
+            }
+
+            const isCorrect = userAns.toLowerCase() === q.answer.toLowerCase();
+            const expBox = document.getElementById(`exp-${q.id}`);
+            card = document.getElementById(`qcard-${q.id}`);
+            
+            // Clear prior grading styling safely
+            card.style.borderLeft = "none";
+            
+            if (isCorrect) {
+                score++;
+                expBox.className = 'explanation-box correct-bg';
+                expBox.style.display = 'block';
+                expBox.innerHTML = `<span class="correct">✓ Correct</span> — <strong>${q.answer}</strong>. ${q.explanation}`;
+                
+                // Color choices green if multiple choice
+                if (q.type === 'mcq') {
+                    const cleanOptId = `label-${q.id}-${userAns.replace(/[^a-zA-Z0-9]/g, '')}`;
+                    const correctLabel = document.getElementById(cleanOptId);
+                    if (correctLabel) correctLabel.style.backgroundColor = '#d1e7dd';
+                }
+            } else {
+                expBox.className = 'explanation-box incorrect-bg';
+                expBox.style.display = 'block';
+                expBox.innerHTML = `
+                    <span class="incorrect">✗ Incorrect</span><br>
+                    <strong>Your Input:</strong> ${userAns || '<i>No Answer</i>'}<br>
+                    <strong>Correct Translation:</strong> <span class="correct">${q.answer}</span><br>
+                    <strong>Reasoning:</strong> ${q.explanation}
+                `;
+                
+                // Flag specific faulty values using CSS accents
+                if (q.type === 'mcq' && userAns) {
+                    const cleanOptId = `label-${q.id}-${userAns.replace(/[^a-zA-Z0-9]/g, '')}`;
+                    const wrongLabel = document.getElementById(cleanOptId);
+                    if (wrongLabel) wrongLabel.style.backgroundColor = '#f8d7da';
+                }
+            }
+        });
+
+        // Set up results block state metrics
+        const resultsDiv = document.getElementById('results');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const statusMessage = document.getElementById('statusMessage');
+        const actionButtons = document.getElementById('actionButtons');
+        
+        resultsDiv.style.display = 'block';
+        document.getElementById('submitBtn').style.display = 'none';
+
+        const finalScorePercent = (score / totalQuestions) * 100;
+        scoreDisplay.innerText = `You scored ${score} out of ${totalQuestions} points (${finalScorePercent.toFixed(0)}%)`;
+
+        // Rigid evaluation matching 100% boundary limit rules
+        if (score === totalQuestions) {
+            resultsDiv.className = "pass-box";
+            scoreDisplay.className = "score-text pass";
+            statusMessage.innerHTML = "<strong>¡Excelente! Perfect Score.</strong> You have fully mastered your Level 1 coursework items!";
+            actionButtons.innerHTML = `<button type="button" class="btn" onclick="initQuiz()">Restart New Shuffled Quiz</button>`;
+        } else {
+            resultsDiv.className = "fail-box";
+            scoreDisplay.className = "score-text fail";
+            statusMessage.innerHTML = "<strong>Passing score is 100%.</strong> Please review the items you missed below and choose an option to continue.";
+            
+            actionButtons.innerHTML = `
+                <button type="button" class="btn btn-secondary" onclick="initQuiz()">Retake the Quiz</button>
+                <button type="button" class="btn" onclick="filterIncorrect()">Work on Incorrect Answers</button>
+            `;
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function filterIncorrect() {
+        // Filter elements out dynamically to isolate only bad data vectors
+        currentQuizData.forEach(q => {
             const fieldName = `question-${q.id}`;
             let userAns = '';
             
@@ -180,29 +426,44 @@
             }
 
             const isCorrect = userAns.toLowerCase() === q.answer.toLowerCase();
+            const card = document.getElementById(`qcard-${q.id}`);
+            
             if (isCorrect) {
-                score++;
+                card.classList.add('hidden'); // Isolate out successes
+            } else {
+                card.classList.remove('hidden'); // Reveal faulty items clearly
+                // Clear the wrong values out so user can guess again cleanly
+                if (q.type === 'mcq') {
+                    const checkedRadio = document.querySelector(`input[name="${fieldName}"]:checked`);
+                    if (checkedRadio) checkedRadio.checked = false;
+                    // Reset styling backgrounds
+                    q.options.forEach(opt => {
+                        const cleanOptId = `label-${q.id}-${opt.replace(/[^a-zA-Z0-9]/g, '')}`;
+                        const lbl = document.getElementById(cleanOptId);
+                        if (lbl) lbl.style.backgroundColor = 'transparent';
+                    });
+                } else if (q.type === 'fill') {
+                    const inputField = document.getElementById(`input-${q.id}`);
+                    if (inputField) inputField.value = '';
+                }
+                // Hide explanation box again for re-testing environment
+                document.getElementById(`exp-${q.id}`).style.display = 'none';
             }
-
-            const expBox = document.getElementById(`exp-${q.id}`);
-            expBox.style.display = 'block';
-            expBox.innerHTML = `
-                <span class="${isCorrect ? 'correct' : 'incorrect'}">
-                    ${isCorrect ? '✓ Correct' : '✗ Incorrect'}
-                </span><br>
-                <strong>Your answer:</strong> ${userAns || 'None'}<br>
-                <strong>Correct answer:</strong> ${q.answer}<br>
-                <strong>Explanation:</strong> ${q.explanation}
-            `;
         });
 
-        const scoreDisplay = document.getElementById('scoreDisplay');
-        scoreDisplay.innerText = `You scored ${score} out of 100 points (${(score/100*100).toFixed(0)}%)`;
-        document.getElementById('results').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Toggle state displays back to processing format
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('submitBtn').style.display = 'block';
+        
+        // Target focus on remaining workload array layout positions smoothly
+        const firstWrongCard = document.querySelector('.question-card:not(.hidden)');
+        if (firstWrongCard) {
+            firstWrongCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 
-    window.onload = renderQuiz;
+    // Initialize application layout tracking
+    window.onload = initQuiz;
 </script>
 
 </body>
